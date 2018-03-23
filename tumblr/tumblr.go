@@ -7,6 +7,7 @@ import (
 	. "../common"
 	"io/ioutil"
 	"encoding/xml"
+	"strings"
 )
 
 type Video interface {
@@ -22,11 +23,12 @@ type TumblrCrawler struct {
 }
 
 type Post struct {
-	PhotoUrl []string `xml:"photo-url,attr"`
+	PhotoUrl []string `xml:"photo-url"`
 }
+
 type TumblrResponse struct {
 	XMLName xml.Name `xml:"tumblr"`
-	Post    []Post   `xml:"posts"`
+	Posts   []Post   `xml:"posts>post"`
 }
 
 var hdPattern = regexp.MustCompile(`'.*"hdUrl":("([^\s,]*)"|false),`)
@@ -59,13 +61,21 @@ func (t *TumblrCrawler) DownloadPhotos(site string) {
 	for true {
 		mediaUrl := fmt.Sprintf(baseUrl, site, "photo", MEDIA_NUM, start)
 		resp := ProxyHttpGet(mediaUrl)
+		defer resp.Body.Close()
 		if resp.StatusCode == 404 {
 			break
 		}
 		body, _ := ioutil.ReadAll(resp.Body)
-		data := string(body)
-		result := TumblrResponse{Post: nil}
-		xml.Unmarshal([]byte(data), &result)
-		start = MEDIA_NUM
+		result := new(TumblrResponse)
+		xml.Unmarshal(body, result)
+		for _, post := range result.Posts {
+			for _, photoUrl := range post.PhotoUrl {
+				if strings.Contains(photoUrl, "avatar") {
+					continue
+				}
+				t.Queue.PushBack(photoUrl)
+			}
+		}
+		start += MEDIA_NUM
 	}
 }

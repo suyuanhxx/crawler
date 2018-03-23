@@ -3,14 +3,13 @@ package common
 import (
 	"net/http"
 	"log"
-	"io/ioutil"
 	"fmt"
 	"golang.org/x/net/proxy"
 	"os"
 )
 
 func ProxyHttpGet(mediaUrl string) *http.Response {
-	dialer, err := proxy.SOCKS5("tcp", "127.0.0.1:1086", nil, proxy.Direct)
+	dialer, err := proxy.SOCKS5("tcp", "127.0.0.1:1080", nil, proxy.Direct)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "can't connect to the proxy:", err)
 		os.Exit(1)
@@ -23,10 +22,7 @@ func ProxyHttpGet(mediaUrl string) *http.Response {
 	if resp, err := httpClient.Get(mediaUrl); err != nil {
 		log.Fatalln(err)
 	} else {
-		defer resp.Body.Close()
-		body, _ := ioutil.ReadAll(resp.Body)
-		data := string(body)
-		fmt.Print(data)
+		//defer resp.Body.Close()
 		return resp
 	}
 	return nil
