@@ -2,12 +2,14 @@ package tumblr
 
 import (
 	"regexp"
-	"container/list"
 	"fmt"
 	. "../common"
 	"io/ioutil"
 	"encoding/xml"
 	"strings"
+	"os/exec"
+	"os"
+	"path/filepath"
 )
 
 type Video interface {
@@ -19,7 +21,7 @@ type Match struct {
 }
 
 type TumblrCrawler struct {
-	Queue *list.List
+	Queue chan string
 }
 
 type Post struct {
@@ -49,13 +51,15 @@ func (m *Match) VideoDefault(url string) bool {
 func New() (*TumblrCrawler) {
 	t := new(TumblrCrawler)
 	if t.Queue == nil {
-		t.Queue = list.New()
+		t.Queue = make(chan string, 50)
 	}
 	return t
 }
 
 func (t *TumblrCrawler) DownloadPhotos(site string) {
 	baseUrl := "http://%s.tumblr.com/api/read?type=%s&num=%d&start=%d"
+
+	go t.downLoadMedia(GetPath(site))
 
 	start := START
 	for true {
@@ -73,9 +77,21 @@ func (t *TumblrCrawler) DownloadPhotos(site string) {
 				if strings.Contains(photoUrl, "avatar") {
 					continue
 				}
-				t.Queue.PushBack(photoUrl)
+				//t.Queue = append(t.Queue, photoUrl)
+				t.Queue <- photoUrl
 			}
 		}
 		start += MEDIA_NUM
 	}
+
+}
+
+func (t *TumblrCrawler) downLoadMedia(dir string) {
+	DownLoadImage(<-t.Queue, dir)
+}
+
+func GetPath(site string) string {
+	file, _ := exec.LookPath(os.Args[0])
+	path, _ := filepath.Abs(file)
+	return path + "/" + site
 }

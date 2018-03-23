@@ -2,7 +2,6 @@ package main
 
 import (
 	tumblr "./tumblr"
-	. "./common"
 	"os"
 	"fmt"
 	"bufio"
@@ -10,11 +9,6 @@ import (
 )
 
 func main() {
-
-	img := "http://img.zcool.cn/community/018d4e554967920000019ae9df1533.jpg"
-
-	DownLoadImage(img)
-
 
 	siteFile, err := os.Open("sites.txt")
 
