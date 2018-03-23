@@ -7,9 +7,7 @@ import (
 	"io/ioutil"
 	"encoding/xml"
 	"strings"
-	"os/exec"
 	"os"
-	"path/filepath"
 )
 
 type Video interface {
@@ -87,11 +85,17 @@ func (t *TumblrCrawler) DownloadPhotos(site string) {
 }
 
 func (t *TumblrCrawler) downLoadMedia(dir string) {
-	DownLoadImage(<-t.Queue, dir)
+	for i := range t.Queue { // chan关闭时，for循环会自动结束
+		DownLoadImage(i, dir)
+	}
 }
 
 func GetPath(site string) string {
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	return path + "/" + site
+	dir, _ := os.Getwd()
+	path := dir + "/" + site
+	_, err := os.Stat(path)
+	if !os.IsExist(err) {
+		os.Mkdir(path, os.ModePerm)
+	}
+	return path
 }

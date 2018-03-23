@@ -2,6 +2,7 @@ package main
 
 import (
 	tumblr "./tumblr"
+	//. "./common"
 	"os"
 	"fmt"
 	"bufio"
@@ -9,7 +10,10 @@ import (
 )
 
 func main() {
+	Start()
+}
 
+func Start()  {
 	siteFile, err := os.Open("sites.txt")
 
 	if err != nil {

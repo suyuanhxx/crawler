@@ -1,7 +1,6 @@
 package common
 
 import (
-	"net/http"
 	"io/ioutil"
 	"os"
 	"io"
@@ -12,7 +11,7 @@ import (
 
 func DownLoadImage(imageUrl string, dir string) {
 	fmt.Println(imageUrl)
-	resp, _ := http.Get(imageUrl)
+	resp := ProxyHttpGet(imageUrl)
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	out, _ := os.Create(dir + getImageName(imageUrl))
