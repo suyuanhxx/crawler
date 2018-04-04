@@ -33,6 +33,7 @@ func Start()  {
 	}
 	t := tumblr.New()
 	for _, site := range siteArray {
+		t.DownloadVideo(site)
 		t.DownloadPhotos(site)
 	}
 

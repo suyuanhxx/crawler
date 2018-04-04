@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-type Video interface {
+type IVideo interface {
 	VideoHd(url string) bool
 	VideoDefault(url string) bool
 }
@@ -19,16 +19,18 @@ type Match struct {
 }
 
 type TumblrCrawler struct {
-	Queue chan string
+	Queue      chan string
+	VideoQueue chan string
 }
 
 type Post struct {
 	PhotoUrl []string `xml:"photo-url"`
+	VideoUrl []string `xml:"video-player"`
 }
 
 type TumblrResponse struct {
-	XMLName xml.Name `xml:"tumblr"`
-	Posts   []Post   `xml:"posts>post"`
+	XMLName    xml.Name `xml:"tumblr"`
+	PhotoPosts []Post   `xml:"posts>post"`
 }
 
 var hdPattern = regexp.MustCompile(`'.*"hdUrl":("([^\s,]*)"|false),`)
@@ -49,19 +51,32 @@ func (m *Match) VideoDefault(url string) bool {
 func New() (*TumblrCrawler) {
 	t := new(TumblrCrawler)
 	if t.Queue == nil {
-		t.Queue = make(chan string, 50)
+		t.Queue = make(chan string)
+		t.VideoQueue = make(chan string)
 	}
 	return t
 }
 
 func (t *TumblrCrawler) DownloadPhotos(site string) {
-	baseUrl := "http://%s.tumblr.com/api/read?type=%s&num=%d&start=%d"
 
 	go t.downLoadMedia(GetPath(site))
 
+	t.saveMedia2Queue(site, "photo")
+}
+
+func (t *TumblrCrawler) DownloadVideo(site string) {
+
+	go t.downLoadMedia(GetPath(site))
+
+	t.saveMedia2Queue(site, "video")
+}
+
+func (t *TumblrCrawler) saveMedia2Queue(site string, mediaType string) {
+	baseUrl := "http://%s.tumblr.com/api/read?type=%s&num=%d&start=%d"
+
 	start := START
 	for true {
-		mediaUrl := fmt.Sprintf(baseUrl, site, "photo", MEDIA_NUM, start)
+		mediaUrl := fmt.Sprintf(baseUrl, site, mediaType, MEDIA_NUM, start)
 		resp := ProxyHttpGet(mediaUrl)
 		defer resp.Body.Close()
 		if resp.StatusCode == 404 {
@@ -70,18 +85,26 @@ func (t *TumblrCrawler) DownloadPhotos(site string) {
 		body, _ := ioutil.ReadAll(resp.Body)
 		result := new(TumblrResponse)
 		xml.Unmarshal(body, result)
-		for _, post := range result.Posts {
-			for _, photoUrl := range post.PhotoUrl {
-				if strings.Contains(photoUrl, "avatar") {
-					continue
+		for _, post := range result.PhotoPosts {
+			if mediaType == "photo" {
+				for _, photoUrl := range post.PhotoUrl {
+					if strings.Contains(photoUrl, "avatar") {
+						continue
+					}
+					t.Queue <- photoUrl
 				}
-				//t.Queue = append(t.Queue, photoUrl)
-				t.Queue <- photoUrl
 			}
+			if mediaType == "video" {
+				for _, videoUrl := range post.VideoUrl {
+					videoUrl = videoUrl[strings.Index(videoUrl, "https"):]
+					source := videoUrl[:strings.Index(videoUrl, `"`)]
+					t.VideoQueue <- source
+				}
+			}
+
 		}
 		start += MEDIA_NUM
 	}
-
 }
 
 func (t *TumblrCrawler) downLoadMedia(dir string) {
