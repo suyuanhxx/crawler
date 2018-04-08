@@ -22,7 +22,6 @@ func Start() {
 	}
 
 	var siteArray []string
-
 	br := bufio.NewReader(siteFile)
 	for {
 		a, _, c := br.ReadLine()
@@ -31,10 +30,11 @@ func Start() {
 		}
 		siteArray = append(siteArray, string(a))
 	}
+
 	t := tumblr.New()
 	for _, site := range siteArray {
-		t.DownloadVideo(site)
-		t.DownloadPhotos(site)
+		go t.DownloadVideo(site)
+		go t.DownloadPhotos(site)
 	}
 
 }

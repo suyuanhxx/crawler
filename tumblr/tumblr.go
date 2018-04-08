@@ -10,7 +10,7 @@ import (
 )
 
 type TumblrCrawler struct {
-	Queue      chan string
+	ImageQueue chan string
 	VideoQueue chan string
 }
 
@@ -31,8 +31,8 @@ var (
 
 func New() (*TumblrCrawler) {
 	t := new(TumblrCrawler)
-	if t.Queue == nil {
-		t.Queue = make(chan string)
+	if t.ImageQueue == nil {
+		t.ImageQueue = make(chan string)
 		t.VideoQueue = make(chan string)
 	}
 	return t
@@ -68,7 +68,7 @@ func (t *TumblrCrawler) saveMedia2Queue(site string, mediaType string) {
 					if strings.Contains(photoUrl, "avatar") {
 						continue
 					}
-					t.Queue <- photoUrl
+					t.ImageQueue <- photoUrl
 				}
 			}
 			if mediaType == "video" {
@@ -86,7 +86,7 @@ func (t *TumblrCrawler) saveMedia2Queue(site string, mediaType string) {
 
 func (t *TumblrCrawler) downLoadMedia(dir string, mediaType string) {
 	if mediaType == PHOTO {
-		for i := range t.Queue { // chan关闭时，for循环会自动结束
+		for i := range t.ImageQueue { // chan关闭时，for循环会自动结束
 			DownLoadMedia(i, dir, mediaType)
 		}
 	}
