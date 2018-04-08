@@ -1,7 +1,7 @@
 package main
 
 import (
-	tumblr "./tumblr"
+	"./tumblr"
 	//. "./common"
 	"os"
 	"fmt"
@@ -13,7 +13,7 @@ func main() {
 	Start()
 }
 
-func Start()  {
+func Start() {
 	siteFile, err := os.Open("sites.txt")
 
 	if err != nil {
@@ -21,7 +21,7 @@ func Start()  {
 		return
 	}
 
-	siteArray := []string{}
+	var siteArray []string
 
 	br := bufio.NewReader(siteFile)
 	for {

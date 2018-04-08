@@ -1,7 +1,6 @@
 package tumblr
 
 import (
-	"regexp"
 	"fmt"
 	. "../common"
 	"io/ioutil"
@@ -9,14 +8,6 @@ import (
 	"strings"
 	"os"
 )
-
-type IVideo interface {
-	VideoHd(url string) bool
-	VideoDefault(url string) bool
-}
-
-type Match struct {
-}
 
 type TumblrCrawler struct {
 	Queue      chan string
@@ -33,20 +24,10 @@ type TumblrResponse struct {
 	PhotoPosts []Post   `xml:"posts>post"`
 }
 
-var hdPattern = regexp.MustCompile(`'.*"hdUrl":("([^\s,]*)"|false),`)
-
-var defaultPattern = regexp.MustCompile(`.*src="(\S*)" `)
-
-var MEDIA_NUM = 50
-var START = 0
-
-func (m *Match) VideoHd(url string) bool {
-	return hdPattern.Match([]byte(url))
-}
-
-func (m *Match) VideoDefault(url string) bool {
-	return defaultPattern.Match([]byte(url))
-}
+var (
+	MEDIA_NUM = 50
+	START     = 0
+)
 
 func New() (*TumblrCrawler) {
 	t := new(TumblrCrawler)
@@ -58,17 +39,13 @@ func New() (*TumblrCrawler) {
 }
 
 func (t *TumblrCrawler) DownloadPhotos(site string) {
-
-	go t.downLoadMedia(GetPath(site))
-
-	t.saveMedia2Queue(site, "photo")
+	go t.downLoadMedia(GetPath(site), PHOTO)
+	t.saveMedia2Queue(site, PHOTO)
 }
 
 func (t *TumblrCrawler) DownloadVideo(site string) {
-
-	go t.downLoadMedia(GetPath(site))
-
-	t.saveMedia2Queue(site, "video")
+	go t.downLoadMedia(GetPath(site), VIDEO)
+	t.saveMedia2Queue(site, VIDEO)
 }
 
 func (t *TumblrCrawler) saveMedia2Queue(site string, mediaType string) {
@@ -107,9 +84,16 @@ func (t *TumblrCrawler) saveMedia2Queue(site string, mediaType string) {
 	}
 }
 
-func (t *TumblrCrawler) downLoadMedia(dir string) {
-	for i := range t.Queue { // chan关闭时，for循环会自动结束
-		DownLoadImage(i, dir)
+func (t *TumblrCrawler) downLoadMedia(dir string, mediaType string) {
+	if mediaType == PHOTO {
+		for i := range t.Queue { // chan关闭时，for循环会自动结束
+			DownLoadMedia(i, dir, mediaType)
+		}
+	}
+	if mediaType == VIDEO {
+		for i := range t.VideoQueue { // chan关闭时，for循环会自动结束
+			DownLoadMedia(i, dir, mediaType)
+		}
 	}
 }
 

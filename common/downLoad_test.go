@@ -5,5 +5,5 @@ import "testing"
 func Test_DownLoadImage(t *testing.T) {
 	img := "http://img.zcool.cn/community/018d4e554967920000019ae9df1533.jpg"
 
-	DownLoadImage(img,"E:\\Develop\\crawler\\")
+	DownLoadMedia(img, "E:\\Develop\\crawler\\", "PHOTO")
 }
