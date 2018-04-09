@@ -5,9 +5,18 @@ import (
 	"errors"
 )
 
-func funcA() error {
+func funcA() (err error) {
 	defer func() {
-		fmt.Println("test")
+		if p := recover(); p != nil {
+			fmt.Println("panic recover! p:", p)
+			str, ok := p.(string)
+			if ok {
+				err = errors.New(str)
+			} else {
+				err = errors.New("panic")
+			}
+			//debug.PrintStack()
+		}
 	}()
 	return funcB()
 }
@@ -28,6 +37,5 @@ func test() {
 }
 
 func main() {
-	//Start()
 	test()
 }
