@@ -32,9 +32,20 @@ func Start() {
 	}
 
 	t := tumblr.New()
-	for _, site := range siteArray {
-		go t.DownloadVideo(site)
-		go t.DownloadPhotos(site)
-	}
 
+	image := make(chan int, 1)
+	video := make(chan int, 1)
+
+	for _, site := range siteArray {
+		go func() {
+			go t.DownloadVideo(site)
+			image <- 1
+		}()
+		go func() {
+			t.DownloadPhotos(site)
+			video <- 1
+		}()
+	}
+	<-image
+	<-video
 }
