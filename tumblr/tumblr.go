@@ -65,9 +65,6 @@ func (t *TumblrCrawler) saveMedia(site string, mediaType string) {
 		xml.Unmarshal(body, result)
 		for _, post := range result.PhotoPosts {
 			t.resolveUrl(mediaType, post)
-			defer func() {
-				fmt.Println("recovered:",recover())
-			}()
 		}
 		start += MEDIA_NUM
 	}
@@ -77,9 +74,6 @@ func (t *TumblrCrawler) resolveUrl(mediaType string, post Post) {
 	switch mediaType {
 	case "photo":
 		for _, photoUrl := range post.PhotoUrl {
-			defer func() {
-				fmt.Println("recovered:",recover())
-			}()
 			if strings.Contains(photoUrl, "avatar") {
 				continue
 			}
@@ -87,42 +81,41 @@ func (t *TumblrCrawler) resolveUrl(mediaType string, post Post) {
 		}
 	case "video":
 		for _, videoUrl := range post.VideoUrl {
-			defer func() {
-				fmt.Println("recovered:",recover())
-			}()
-			i := strings.Index(videoUrl, "https")
-			if i < len(videoUrl) && i > 0 {
-				videoUrl = videoUrl[i:]
-			}
-			j := strings.Index(videoUrl, `"`)
-			if j < len(videoUrl) && j > 0 {
-				videoUrl = videoUrl[:j]
-			}
-			end := strings.LastIndex(videoUrl, "/")
-			if end < len(videoUrl) && end > 0 {
-				source := "https://vtt.tumblr.com" + videoUrl[end:]
-				if len(source) > 0 {
-					t.VideoChannel <- source
-				}
-			}
+			source := t.resolveVideoUrl(videoUrl)
+			t.VideoChannel <- source
 		}
 	}
+}
+
+func (t *TumblrCrawler) resolveVideoUrl(videoUrl string) string {
+	defer func() {
+		fmt.Println("recovered:", recover())
+	}()
+	i := strings.Index(videoUrl, "https")
+	if i < len(videoUrl) && i > 0 {
+		videoUrl = videoUrl[i:]
+	}
+	j := strings.Index(videoUrl, `"`)
+	if j < len(videoUrl) && j > 0 {
+		videoUrl = videoUrl[:j]
+	}
+	end := strings.LastIndex(videoUrl, "/")
+
+	var source string
+	if end < len(videoUrl) && end > 0 {
+		source = "https://vtt.tumblr.com" + videoUrl[end:]
+	}
+	return source
 }
 
 func (t *TumblrCrawler) downLoadMedia(site string, mediaType string) {
 	switch mediaType {
 	case "photo":
 		for url := range t.ImageChannel {
-			defer func() {
-				fmt.Println("recovered:",recover())
-			}()
 			DownLoadMedia(url, site, PHOTO)
 		}
 	case "video":
 		for url := range t.VideoChannel {
-			defer func() {
-				fmt.Println("recovered:",recover())
-			}()
 			DownLoadMedia(url, site, VIDEO)
 		}
 	}

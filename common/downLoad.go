@@ -16,6 +16,9 @@ var (
 
 func DownLoadMedia(url string, site string, mediaType string) {
 	fmt.Println(url)
+	defer func() {
+		fmt.Println("recovered:", recover())
+	}()
 	if len(url) == 0 {
 		return
 	}
