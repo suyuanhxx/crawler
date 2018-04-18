@@ -23,7 +23,7 @@ func Start() {
 
 	var siteArray []string
 	br := bufio.NewReader(siteFile)
-	for {
+	for true {
 		a, _, c := br.ReadLine()
 		if c == io.EOF {
 			break
@@ -37,14 +37,14 @@ func Start() {
 	video := make(chan int, 1)
 
 	for _, site := range siteArray {
-		go func() {
+		go func(site string) {
 			go t.DownloadVideo(site)
 			image <- 1
-		}()
-		go func() {
+		}(site)
+		go func(site string) {
 			t.DownloadPhotos(site)
 			video <- 1
-		}()
+		}(site)
 	}
 	<-image
 	<-video
