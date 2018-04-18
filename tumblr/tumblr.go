@@ -56,15 +56,18 @@ func (t *TumblrCrawler) saveMedia(site string, mediaType string) {
 	for true {
 		mediaUrl := fmt.Sprintf(baseUrl, site, mediaType, MEDIA_NUM, start)
 		resp := ProxyHttpGet(mediaUrl)
-		defer resp.Body.Close()
 		if resp.StatusCode == 404 {
 			break
 		}
+		defer resp.Body.Close()
 		body, _ := ioutil.ReadAll(resp.Body)
 		result := new(TumblrResponse)
 		xml.Unmarshal(body, result)
 		for _, post := range result.PhotoPosts {
 			t.resolveUrl(mediaType, post)
+			defer func() {
+				fmt.Println("recovered:",recover())
+			}()
 		}
 		start += MEDIA_NUM
 	}
@@ -74,6 +77,9 @@ func (t *TumblrCrawler) resolveUrl(mediaType string, post Post) {
 	switch mediaType {
 	case "photo":
 		for _, photoUrl := range post.PhotoUrl {
+			defer func() {
+				fmt.Println("recovered:",recover())
+			}()
 			if strings.Contains(photoUrl, "avatar") {
 				continue
 			}
@@ -81,6 +87,9 @@ func (t *TumblrCrawler) resolveUrl(mediaType string, post Post) {
 		}
 	case "video":
 		for _, videoUrl := range post.VideoUrl {
+			defer func() {
+				fmt.Println("recovered:",recover())
+			}()
 			i := strings.Index(videoUrl, "https")
 			if i < len(videoUrl) && i > 0 {
 				videoUrl = videoUrl[i:]
@@ -104,10 +113,16 @@ func (t *TumblrCrawler) downLoadMedia(site string, mediaType string) {
 	switch mediaType {
 	case "photo":
 		for url := range t.ImageChannel {
+			defer func() {
+				fmt.Println("recovered:",recover())
+			}()
 			DownLoadMedia(url, site, PHOTO)
 		}
 	case "video":
 		for url := range t.VideoChannel {
+			defer func() {
+				fmt.Println("recovered:",recover())
+			}()
 			DownLoadMedia(url, site, VIDEO)
 		}
 	}
