@@ -2,7 +2,6 @@ package common
 
 import (
 	"net/http"
-	"log"
 	"fmt"
 	"golang.org/x/net/proxy"
 	"os"
@@ -20,7 +19,7 @@ func ProxyHttpGet(mediaUrl string) *http.Response {
 	// set our socks5 as the dialer
 	httpTransport.Dial = dialer.Dial
 	if resp, err := httpClient.Get(mediaUrl); err != nil {
-		log.Fatalln(err)
+		fmt.Println(err)
 	} else {
 		//defer resp.Body.Close()
 		return resp

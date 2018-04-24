@@ -15,16 +15,17 @@ var (
 )
 
 func DownLoadMedia(url string, site string, mediaType string) {
-	fmt.Println(url)
-	defer func() {
-		fmt.Println("recovered:", recover())
-	}()
 	if len(url) == 0 {
 		return
 	}
+	fmt.Println(url)
 	resp := ProxyHttpGet(url)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("DownLoad error:", url, body)
+		return
+	}
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
 
 	var filename string
 	if mediaType == PHOTO {
@@ -33,7 +34,11 @@ func DownLoadMedia(url string, site string, mediaType string) {
 		filename = getVideoName(url)
 	}
 
-	out, _ := os.Create(GetPath(site, mediaType) + filename)
+	out, e := os.Create(GetPath(site, mediaType) + filename)
+	if e != nil {
+		fmt.Println("create file error:", url, out)
+		return
+	}
 	io.Copy(out, bytes.NewReader(body))
 }
 
@@ -53,7 +58,6 @@ func GetPath(site string, mediaType string) string {
 	_, err := os.Stat(path)
 	if !os.IsExist(err) {
 		if e := os.MkdirAll(path, os.ModePerm); e == nil {
-			fmt.Println()
 		}
 	}
 	return path

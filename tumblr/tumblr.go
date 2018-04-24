@@ -2,7 +2,7 @@ package tumblr
 
 import (
 	"fmt"
-	. "../common"
+	. "github.com/suyuanhxx/crawler/common"
 	"io/ioutil"
 	"encoding/xml"
 	"strings"
@@ -13,19 +13,10 @@ type TumblrCrawler struct {
 	VideoChannel chan string
 }
 
-type Post struct {
-	PhotoUrl []string `xml:"photo-url"`
-	VideoUrl []string `xml:"video-player"`
-}
-
-type TumblrResponse struct {
-	XMLName    xml.Name `xml:"tumblr"`
-	PhotoPosts []Post   `xml:"posts>post"`
-}
-
 var (
 	MEDIA_NUM = 50
-	START     = 0
+	//START     = 0
+	BASE_URL = "http://%s.tumblr.com/api/read?type=%s&num=%d&start=%d"
 )
 
 func New() (*TumblrCrawler) {
@@ -41,36 +32,41 @@ func New() (*TumblrCrawler) {
 
 func (t *TumblrCrawler) DownloadPhotos(site string) {
 	go t.downLoadMedia(site, PHOTO)
-	t.saveMedia(site, PHOTO)
+	t.getSourceUrl(site, PHOTO)
 }
 
 func (t *TumblrCrawler) DownloadVideo(site string) {
 	go t.downLoadMedia(site, VIDEO)
-	t.saveMedia(site, VIDEO)
+	t.getSourceUrl(site, VIDEO)
 }
 
-func (t *TumblrCrawler) saveMedia(site string, mediaType string) {
-	baseUrl := "http://%s.tumblr.com/api/read?type=%s&num=%d&start=%d"
-
-	start := START
+func (t *TumblrCrawler) getSourceUrl(site string, mediaType string) {
+	start := 0
 	for true {
-		mediaUrl := fmt.Sprintf(baseUrl, site, mediaType, MEDIA_NUM, start)
+		mediaUrl := fmt.Sprintf(BASE_URL, site, mediaType, MEDIA_NUM, start)
 		resp := ProxyHttpGet(mediaUrl)
-		if resp.StatusCode == 404 {
+		if resp.StatusCode == 404 || resp == nil {
 			break
 		}
 		defer resp.Body.Close()
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			continue
+		}
 		result := new(TumblrResponse)
 		xml.Unmarshal(body, result)
-		for _, post := range result.PhotoPosts {
-			t.resolveUrl(mediaType, post)
+		if len(result.Posts) == 0 || result.Posts == nil {
+			break
+		}
+		for _, post := range result.Posts {
+			t.parseUrl(mediaType, post)
 		}
 		start += MEDIA_NUM
 	}
+	fmt.Println("getSourceUrl finish!")
 }
 
-func (t *TumblrCrawler) resolveUrl(mediaType string, post Post) {
+func (t *TumblrCrawler) parseUrl(mediaType string, post Post) {
 	switch mediaType {
 	case "photo":
 		for _, photoUrl := range post.PhotoUrl {
@@ -81,31 +77,12 @@ func (t *TumblrCrawler) resolveUrl(mediaType string, post Post) {
 		}
 	case "video":
 		for _, videoUrl := range post.VideoUrl {
-			source := t.resolveVideoUrl(videoUrl)
-			t.VideoChannel <- source
+			p, source := ParseVideoUrl(videoUrl)
+			if p {
+				t.VideoChannel <- source
+			}
 		}
 	}
-}
-
-func (t *TumblrCrawler) resolveVideoUrl(videoUrl string) string {
-	defer func() {
-		fmt.Println("recovered:", recover())
-	}()
-	i := strings.Index(videoUrl, "https")
-	if i < len(videoUrl) && i > 0 {
-		videoUrl = videoUrl[i:]
-	}
-	j := strings.Index(videoUrl, `"`)
-	if j < len(videoUrl) && j > 0 {
-		videoUrl = videoUrl[:j]
-	}
-	end := strings.LastIndex(videoUrl, "/")
-
-	var source string
-	if end < len(videoUrl) && end > 0 {
-		source = "https://vtt.tumblr.com" + videoUrl[end:]
-	}
-	return source
 }
 
 func (t *TumblrCrawler) downLoadMedia(site string, mediaType string) {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"./tumblr"
-	//. "./common"
 	"os"
 	"fmt"
 	"bufio"
@@ -38,7 +37,7 @@ func Start() {
 
 	for _, site := range siteArray {
 		go func(site string) {
-			go t.DownloadVideo(site)
+			t.DownloadVideo(site)
 			image <- 1
 		}(site)
 		go func(site string) {
@@ -48,4 +47,6 @@ func Start() {
 	}
 	<-image
 	<-video
+	close(t.ImageChannel)
+	close(t.VideoChannel)
 }
