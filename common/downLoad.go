@@ -8,6 +8,7 @@ import (
 	"strings"
 	"fmt"
 	"sync"
+	"net/http"
 )
 
 var (
@@ -20,7 +21,13 @@ func DownLoadMedia(w *sync.WaitGroup, url, site, mediaType string) {
 		return
 	}
 	fmt.Println(url)
-	resp := ProxyHttpGet(url)
+	//resp := ProxyHttpGet(url)
+	//resp,err := ProxyHttpGet(url)
+	resp, err := http.Get(url)
+	if err != nil || resp == nil || resp.Body == nil {
+		return
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("DownLoad error:", url, body)

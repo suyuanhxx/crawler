@@ -7,12 +7,11 @@ import (
 	"encoding/xml"
 	"sync"
 	"strings"
+	"net/http"
 )
 
 type TumblrCrawler struct {
-	ImageChannel chan string
-	VideoChannel chan string
-	waitGroup    *sync.WaitGroup
+	waitGroup *sync.WaitGroup
 }
 
 var (
@@ -23,31 +22,24 @@ var (
 
 func New() (*TumblrCrawler) {
 	t := new(TumblrCrawler)
-	if t.ImageChannel == nil {
-		t.ImageChannel = make(chan string, 50)
-	}
-	if t.VideoChannel == nil {
-		t.VideoChannel = make(chan string, 50)
-	}
+	t.waitGroup = &sync.WaitGroup{}
 	return t
 }
 
-func (t *TumblrCrawler) DownloadPhotos(w *sync.WaitGroup, site string) {
+func (t *TumblrCrawler) StartDownload(w *sync.WaitGroup, site string) {
 	t.fetchSource(site, PHOTO)
-	w.Done()
-}
-
-func (t *TumblrCrawler) DownloadVideo(w *sync.WaitGroup, site string) {
 	t.fetchSource(site, VIDEO)
 	w.Done()
 }
 
 func (t *TumblrCrawler) fetchSource(site string, mediaType string) {
-	start := 0
+	w, start := &sync.WaitGroup{}, 0
+
 	for true {
 		mediaUrl := fmt.Sprintf(BASE_URL, site, mediaType, MEDIA_NUM, start)
-		resp := ProxyHttpGet(mediaUrl)
-		if resp.StatusCode == 404 || resp == nil {
+		//resp,err := ProxyHttpGet(mediaUrl)
+		resp, err := http.Get(mediaUrl)
+		if resp.StatusCode == 404 || resp == nil || err != nil {
 			break
 		}
 		defer resp.Body.Close()
@@ -61,23 +53,25 @@ func (t *TumblrCrawler) fetchSource(site string, mediaType string) {
 			break
 		}
 		for _, post := range result.Posts {
-			t.waitGroup.Add(1)
-			go func(site, mediaType string, post Post) {
-				t.downLoad(site, mediaType, post)
-			}(site, mediaType, post)
+			w.Add(1)
+			go func(w *sync.WaitGroup, site, mediaType string, post Post) {
+				t.downLoad(w, site, mediaType, post)
+			}(w, site, mediaType, post)
 		}
 		start += MEDIA_NUM
 	}
+	w.Wait()
 	fmt.Println("fetchSource finish!")
 }
 
-func (t *TumblrCrawler) downLoad(site, mediaType string, post Post) {
+func (t *TumblrCrawler) downLoad(w *sync.WaitGroup, site, mediaType string, post Post) {
 	switch mediaType {
 	case PHOTO:
 		t.downLoadPhoto(site, post)
 	case VIDEO:
 		t.downLoadVideo(site, post)
 	}
+	w.Done()
 }
 
 func (t *TumblrCrawler) downLoadPhoto(site string, post Post) {
@@ -90,7 +84,7 @@ func (t *TumblrCrawler) downLoadPhoto(site string, post Post) {
 			DownLoadMedia(w, photoUrl, site, PHOTO)
 		}(t.waitGroup, photoUrl, site)
 	}
-	t.waitGroup.Done()
+	t.waitGroup.Wait()
 }
 
 func (t *TumblrCrawler) downLoadVideo(site string, post Post) {
@@ -103,18 +97,5 @@ func (t *TumblrCrawler) downLoadVideo(site string, post Post) {
 			}(t.waitGroup, source, site)
 		}
 	}
-	t.waitGroup.Done()
+	t.waitGroup.Wait()
 }
-
-//func (t *TumblrCrawler) downLoadMedia(site string, mediaType string) {
-//	switch mediaType {
-//	case "photo":
-//		for url := range t.ImageChannel {
-//			DownLoadMedia(url, site, PHOTO)
-//		}
-//	case "video":
-//		for url := range t.VideoChannel {
-//			DownLoadMedia(url, site, VIDEO)
-//		}
-//	}
-//}

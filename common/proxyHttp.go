@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func ProxyHttpGet(mediaUrl string) *http.Response {
+func ProxyHttpGet(mediaUrl string) (*http.Response, error) {
 	dialer, err := proxy.SOCKS5("tcp", "127.0.0.1:1080", nil, proxy.Direct)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "can't connect to the proxy:", err)
@@ -18,11 +18,8 @@ func ProxyHttpGet(mediaUrl string) *http.Response {
 	httpClient := &http.Client{Transport: httpTransport}
 	// set our socks5 as the dialer
 	httpTransport.Dial = dialer.Dial
-	if resp, err := httpClient.Get(mediaUrl); err != nil {
-		fmt.Println(err)
-	} else {
-		//defer resp.Body.Close()
-		return resp
-	}
-	return nil
+	resp, err := httpClient.Get(mediaUrl)
+	//defer resp.Body.Close()
+	fmt.Println(err)
+	return resp, err
 }

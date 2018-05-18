@@ -37,11 +37,8 @@ func Start() {
 	for _, site := range siteArray {
 		w.Add(1)
 		go func(site string) {
-			t.DownloadVideo(w, site)
-		}(site)
-		w.Add(1)
-		go func(site string) {
-			t.DownloadPhotos(w, site)
+			t.StartDownload(w, site)
 		}(site)
 	}
+	w.Wait()
 }
