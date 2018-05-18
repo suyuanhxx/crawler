@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"bufio"
 	"io"
+	"sync"
 )
 
 func main() {
@@ -31,22 +32,16 @@ func Start() {
 	}
 
 	t := tumblr.New()
-
-	image := make(chan int, 1)
-	video := make(chan int, 1)
+	w := &sync.WaitGroup{}
 
 	for _, site := range siteArray {
+		w.Add(1)
 		go func(site string) {
-			t.DownloadVideo(site)
-			image <- 1
+			t.DownloadVideo(w, site)
 		}(site)
+		w.Add(1)
 		go func(site string) {
-			t.DownloadPhotos(site)
-			video <- 1
+			t.DownloadPhotos(w, site)
 		}(site)
 	}
-	<-image
-	<-video
-	close(t.ImageChannel)
-	close(t.VideoChannel)
 }

@@ -5,12 +5,14 @@ import (
 	. "github.com/suyuanhxx/crawler/common"
 	"io/ioutil"
 	"encoding/xml"
+	"sync"
 	"strings"
 )
 
 type TumblrCrawler struct {
 	ImageChannel chan string
 	VideoChannel chan string
+	waitGroup    *sync.WaitGroup
 }
 
 var (
@@ -30,17 +32,17 @@ func New() (*TumblrCrawler) {
 	return t
 }
 
-func (t *TumblrCrawler) DownloadPhotos(site string) {
-	go t.downLoadMedia(site, PHOTO)
-	t.getSourceUrl(site, PHOTO)
+func (t *TumblrCrawler) DownloadPhotos(w *sync.WaitGroup, site string) {
+	t.fetchSource(site, PHOTO)
+	w.Done()
 }
 
-func (t *TumblrCrawler) DownloadVideo(site string) {
-	go t.downLoadMedia(site, VIDEO)
-	t.getSourceUrl(site, VIDEO)
+func (t *TumblrCrawler) DownloadVideo(w *sync.WaitGroup, site string) {
+	t.fetchSource(site, VIDEO)
+	w.Done()
 }
 
-func (t *TumblrCrawler) getSourceUrl(site string, mediaType string) {
+func (t *TumblrCrawler) fetchSource(site string, mediaType string) {
 	start := 0
 	for true {
 		mediaUrl := fmt.Sprintf(BASE_URL, site, mediaType, MEDIA_NUM, start)
@@ -59,41 +61,60 @@ func (t *TumblrCrawler) getSourceUrl(site string, mediaType string) {
 			break
 		}
 		for _, post := range result.Posts {
-			t.parseUrl(mediaType, post)
+			t.waitGroup.Add(1)
+			go func(site, mediaType string, post Post) {
+				t.downLoad(site, mediaType, post)
+			}(site, mediaType, post)
 		}
 		start += MEDIA_NUM
 	}
-	fmt.Println("getSourceUrl finish!")
+	fmt.Println("fetchSource finish!")
 }
 
-func (t *TumblrCrawler) parseUrl(mediaType string, post Post) {
+func (t *TumblrCrawler) downLoad(site, mediaType string, post Post) {
 	switch mediaType {
-	case "photo":
-		for _, photoUrl := range post.PhotoUrl {
-			if strings.Contains(photoUrl, "avatar") {
-				continue
-			}
-			t.ImageChannel <- photoUrl
-		}
-	case "video":
-		for _, videoUrl := range post.VideoUrl {
-			p, source := ParseVideoUrl(videoUrl)
-			if p {
-				t.VideoChannel <- source
-			}
-		}
+	case PHOTO:
+		t.downLoadPhoto(site, post)
+	case VIDEO:
+		t.downLoadVideo(site, post)
 	}
 }
 
-func (t *TumblrCrawler) downLoadMedia(site string, mediaType string) {
-	switch mediaType {
-	case "photo":
-		for url := range t.ImageChannel {
-			DownLoadMedia(url, site, PHOTO)
+func (t *TumblrCrawler) downLoadPhoto(site string, post Post) {
+	for _, photoUrl := range post.PhotoUrl {
+		if strings.Contains(photoUrl, "avatar") {
+			continue
 		}
-	case "video":
-		for url := range t.VideoChannel {
-			DownLoadMedia(url, site, VIDEO)
+		t.waitGroup.Add(1)
+		go func(w *sync.WaitGroup, photoUrl, site string) {
+			DownLoadMedia(w, photoUrl, site, PHOTO)
+		}(t.waitGroup, photoUrl, site)
+	}
+	t.waitGroup.Done()
+}
+
+func (t *TumblrCrawler) downLoadVideo(site string, post Post) {
+	for _, videoUrl := range post.VideoUrl {
+		ok, source := ParseVideoUrl(videoUrl)
+		if ok {
+			t.waitGroup.Add(1)
+			go func(w *sync.WaitGroup, source, site string) {
+				DownLoadMedia(w, source, site, VIDEO)
+			}(t.waitGroup, source, site)
 		}
 	}
+	t.waitGroup.Done()
 }
+
+//func (t *TumblrCrawler) downLoadMedia(site string, mediaType string) {
+//	switch mediaType {
+//	case "photo":
+//		for url := range t.ImageChannel {
+//			DownLoadMedia(url, site, PHOTO)
+//		}
+//	case "video":
+//		for url := range t.VideoChannel {
+//			DownLoadMedia(url, site, VIDEO)
+//		}
+//	}
+//}

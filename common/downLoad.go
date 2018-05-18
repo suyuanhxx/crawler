@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"strings"
 	"fmt"
+	"sync"
 )
 
 var (
@@ -14,7 +15,7 @@ var (
 	VIDEO = "video"
 )
 
-func DownLoadMedia(url string, site string, mediaType string) {
+func DownLoadMedia(w *sync.WaitGroup, url, site, mediaType string) {
 	if len(url) == 0 {
 		return
 	}
@@ -40,6 +41,7 @@ func DownLoadMedia(url string, site string, mediaType string) {
 		return
 	}
 	io.Copy(out, bytes.NewReader(body))
+	w.Done()
 }
 
 func getImageName(imageUrl string) string {
