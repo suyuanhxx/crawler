@@ -33,7 +33,7 @@ func (t *TumblrCrawler) StartDownload(w *sync.WaitGroup, site string) {
 }
 
 func (t *TumblrCrawler) fetchSource(site string, mediaType string) {
-	w, start := &sync.WaitGroup{}, 0
+	start := 0
 
 	for true {
 		mediaUrl := fmt.Sprintf(BASE_URL, site, mediaType, MEDIA_NUM, start)
@@ -53,25 +53,20 @@ func (t *TumblrCrawler) fetchSource(site string, mediaType string) {
 			break
 		}
 		for _, post := range result.Posts {
-			w.Add(1)
-			go func(w *sync.WaitGroup, site, mediaType string, post Post) {
-				t.downLoad(w, site, mediaType, post)
-			}(w, site, mediaType, post)
+			t.downLoad(site, mediaType, post)
 		}
 		start += MEDIA_NUM
 	}
-	w.Wait()
 	fmt.Println("fetchSource finish!")
 }
 
-func (t *TumblrCrawler) downLoad(w *sync.WaitGroup, site, mediaType string, post Post) {
+func (t *TumblrCrawler) downLoad(site, mediaType string, post Post) {
 	switch mediaType {
 	case PHOTO:
 		t.downLoadPhoto(site, post)
 	case VIDEO:
 		t.downLoadVideo(site, post)
 	}
-	w.Done()
 }
 
 func (t *TumblrCrawler) downLoadPhoto(site string, post Post) {

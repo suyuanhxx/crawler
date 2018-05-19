@@ -1,14 +1,14 @@
 package common
 
 import (
-	"io/ioutil"
 	"os"
-	"io"
-	"bytes"
 	"strings"
 	"fmt"
 	"sync"
 	"net/http"
+	"io/ioutil"
+	"io"
+	"bytes"
 )
 
 var (
@@ -21,7 +21,11 @@ func DownLoadMedia(w *sync.WaitGroup, url, site, mediaType string) {
 		return
 	}
 	fmt.Println(url)
-	//resp := ProxyHttpGet(url)
+	downloadMedia(url, site, mediaType)
+	w.Done()
+}
+
+func downloadMedia(url, site, mediaType string) {
 	//resp,err := ProxyHttpGet(url)
 	resp, err := http.Get(url)
 	if err != nil || resp == nil || resp.Body == nil {
@@ -48,7 +52,6 @@ func DownLoadMedia(w *sync.WaitGroup, url, site, mediaType string) {
 		return
 	}
 	io.Copy(out, bytes.NewReader(body))
-	w.Done()
 }
 
 func getImageName(imageUrl string) string {
