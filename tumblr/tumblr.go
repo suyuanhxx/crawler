@@ -8,6 +8,7 @@ import (
 	"sync"
 	"strings"
 	//"net/http"
+	"net/http"
 )
 
 type TumblrCrawler struct {
@@ -37,8 +38,8 @@ func (t *TumblrCrawler) fetchSource(site string, mediaType string) {
 
 	for true {
 		mediaUrl := fmt.Sprintf(BASE_URL, site, mediaType, MEDIA_NUM, start)
-		resp,err := ProxyHttpGet(mediaUrl)
-		//resp, err := http.Get(mediaUrl)
+		//resp,err := ProxyHttpGet(mediaUrl)
+		resp, err := http.Get(mediaUrl)
 		if resp.StatusCode == 404 || resp == nil || err != nil {
 			break
 		}
