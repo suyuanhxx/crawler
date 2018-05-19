@@ -7,7 +7,7 @@ import (
 	"encoding/xml"
 	"sync"
 	"strings"
-	//"net/http"
+
 	"net/http"
 )
 
@@ -71,27 +71,30 @@ func (t *TumblrCrawler) downLoad(site, mediaType string, post Post) {
 }
 
 func (t *TumblrCrawler) downLoadPhoto(site string, post Post) {
+	w := &sync.WaitGroup{}
 	for _, photoUrl := range post.PhotoUrl {
 		if strings.Contains(photoUrl, "avatar") {
 			continue
 		}
-		t.waitGroup.Add(1)
+		w.Add(1)
 		go func(w *sync.WaitGroup, photoUrl, site string) {
 			DownLoadMedia(w, photoUrl, site, PHOTO)
-		}(t.waitGroup, photoUrl, site)
+		}(w, photoUrl, site)
 	}
-	t.waitGroup.Wait()
+	w.Wait()
 }
 
 func (t *TumblrCrawler) downLoadVideo(site string, post Post) {
+	w := &sync.WaitGroup{}
+
 	for _, videoUrl := range post.VideoUrl {
 		ok, source := ParseVideoUrl(videoUrl)
 		if ok {
-			t.waitGroup.Add(1)
+			w.Add(1)
 			go func(w *sync.WaitGroup, source, site string) {
 				DownLoadMedia(w, source, site, VIDEO)
-			}(t.waitGroup, source, site)
+			}(w, source, site)
 		}
 	}
-	t.waitGroup.Wait()
+	w.Wait()
 }

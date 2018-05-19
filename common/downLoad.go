@@ -5,10 +5,10 @@ import (
 	"strings"
 	"fmt"
 	"sync"
-	"net/http"
 	"io/ioutil"
 	"io"
 	"bytes"
+	"net/http"
 )
 
 var (
